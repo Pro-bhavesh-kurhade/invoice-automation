@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Review invoice · InvoiceDesk{% endblock %}
+{% block content %}
+  <a class="back-link" href="{{ url_for('index') }}">← Back to dashboard</a>
+  <section class="hero compact">
+    <div><p class="eyebrow">INVOICE / REVIEW #{{ invoice.id }}</p><h1>Review invoice</h1><p class="muted">{{ invoice.original_name }} · Uploaded {{ invoice.uploaded_at }}</p></div>
+    <span class="status {% if invoice.review_status == 'Approved' %}approved{% elif invoice.review_status == 'Rejected' %}rejected{% else %}pending{% endif %}">{{ invoice.review_status }}</span>
+  </section>
+  <div class="review-grid">
+    <section class="panel">
+      <div class="panel-heading"><div><h2>Original document</h2><p class="muted">Use this to manually verify extracted details.</p></div></div>
+      {% if invoice.stored_name.lower().endswith(('.png','.jpg','.jpeg','.webp')) %}
+        <img class="preview-image" src="{{ url_for('uploaded_file', filename=invoice.stored_name) }}" alt="Uploaded invoice image">
+      {% elif invoice.stored_name.lower().endswith('.pdf') %}
+        <iframe class="pdf-frame" src="{{ url_for('uploaded_file', filename=invoice.stored_name) }}" title="Invoice PDF preview"></iframe>
+      {% else %}
+        <p>Preview not available for this file type.</p>
+      {% endif %}
+      <a class="text-link" href="{{ url_for('uploaded_file', filename=invoice.stored_name) }}" target="_blank" rel="noopener">Open original file in new tab ↗</a>
+      <div class="notice"><strong>Not OCR-processed.</strong> This starter version does not automatically read the document.</div>
+    </section>
+    <section class="panel">
+      <div class="panel-heading"><div><h2>Invoice data</h2><p class="muted">Enter values as shown on the original invoice.</p></div><span class="step-tag">MANUAL ENTRY</span></div>
+      <form method="post" class="data-form">
+        <label>Document type
+          <select name="doc_type">
+            {% for v in ['Unknown','Purchase Invoice','Sales Invoice','Credit Note','Debit Note','Expense Bill','Other'] %}
+              <option value="{{ v }}" {% if invoice.doc_type == v %}selected{% endif %}>{{ v }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Supplier / customer name<input name="party_name" value="{{ invoice.party_name }}" placeholder="Party name"></label>
+        <label>GSTIN<input name="gstin" value="{{ invoice.gstin }}" placeholder="15-character GSTIN"></label>
+        <div class="field-row">
+          <label>Invoice number<input name="invoice_number" value="{{ invoice.invoice_number }}" placeholder="e.g. INV-001"></label>
+          <label>Invoice date<input name="invoice_date" value="{{ invoice.invoice_date }}" placeholder="YYYY-MM-DD"></label>
+        </div>
+        <div class="field-row">
+          <label>Taxable value<input name="taxable_value" value="{{ invoice.taxable_value }}" placeholder="0.00" inputmode="decimal"></label>
+          <label>Tax amount<input name="tax_amount" value="{{ invoice.tax_amount }}" placeholder="0.00" inputmode="decimal"></label>
+        </div>
+        <label>Invoice total<input name="invoice_total" value="{{ invoice.invoice_total }}" placeholder="0.00" inputmode="decimal"></label>
+        <label>Suggested Tally ledger<input name="ledger_name" value="{{ invoice.ledger_name }}" placeholder="Leave blank until verified"></label>
+        <label>Review status
+          <select name="review_status">
+            {% for v in ['Needs review','Exception - Missing ledger','Exception - GSTIN mismatch','Exception - Possible duplicate','Exception - Amount mismatch','Approved','Rejected'] %}
+              <option value="{{ v }}" {% if invoice.review_status == v %}selected{% endif %}>{{ v }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Reviewer notes<textarea name="notes" rows="3" placeholder="Explain corrections, exceptions or approval reasoning">{{ invoice.notes }}</textarea></label>
+        <div class="notice warning"><strong>Safety:</strong> “Approved” only records the review status in this prototype. It does not verify the ledger or create a Tally voucher.</div>
+        <button class="button primary full" type="submit">Save review <span>→</span></button>
+      </form>
+    </section>
+  </div>
+  <section class="panel audit-panel">
+    <div class="panel-heading"><div><h2>Audit history</h2><p class="muted">Basic log of uploads and review saves.</p></div></div>
+    {% if logs %}
+      <div class="audit-list">
+      {% for log in logs %}
+        <div class="audit-item"><span class="audit-dot"></span><div class="audit-body"><strong>{{ log.action }}</strong><div class="muted small">{{ log.details }}</div></div><time>{{ log.created_at }}</time></div>
+      {% endfor %}
+      </div>
+    {% else %}<p class="muted">No activity recorded.</p>{% endif %}
+  </section>
+{% endblock %}
